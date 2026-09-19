@@ -6,8 +6,8 @@
 
 **Status:** ready-for-agent
 
-- [ ] Three-way verdict band: `noul < 0.4` → No (human); `0.4–0.6` → Uncertain; `> 0.6` → Yes (AI). Raw AI-written % always shown.
-- [ ] Full per-label probability bars for the `which_ai` choice (e.g. claude 62%, gpt 20%, …).
-- [ ] Which-AI section shown only when the verdict is Yes or Uncertain; hidden on a human verdict.
-- [ ] The analyzed text snippet is displayed (HTML-escaped) alongside a link back to the source URL.
-- [ ] A short honesty note states that Jev's calibration holds across groups, not per individual answer.
+- [x] Three-way verdict band: `noul < 0.4` → No (human); `0.4–0.6` → Uncertain; `> 0.6` → Yes (AI). Raw AI-written % always shown.
+- [x] Full per-label probability bars for the `which_ai` choice (e.g. claude 62%, gpt 20%, …).
+- [x] Which-AI section shown only when the verdict is Yes or Uncertain; hidden on a human verdict.
+- [x] The analyzed text snippet is displayed (HTML-escaped) alongside a link back to the source URL.
+- [x] A short honesty note states that Jev's calibration holds across groups, not per individual answer.

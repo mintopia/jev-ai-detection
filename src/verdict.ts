@@ -1,5 +1,7 @@
-export type Verdict = "Yes" | "No";
+export type Verdict = "Yes" | "No" | "Uncertain";
 
 export function verdictFromNoul(noul: number): Verdict {
-  return noul >= 0.5 ? "Yes" : "No";
+  if (noul > 0.6) return "Yes";
+  if (noul < 0.4) return "No";
+  return "Uncertain";
 }
