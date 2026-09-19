@@ -6,9 +6,9 @@
 
 **Status:** ready-for-agent
 
-- [ ] `/owner/repo/issues/N` → issue body (already works from 01).
-- [ ] `/owner/repo/issues/N#issuecomment-ID` → that specific issue comment's body.
-- [ ] `/owner/repo/pull/N` → PR description body.
-- [ ] `/owner/repo/pull/N#discussion_rID` → that PR review comment; `#issuecomment-ID` on a PR → that issue-style comment.
-- [ ] The stored `source_type` records which shape was analyzed.
-- [ ] Unrecognized / unparseable URLs return a clear error, not a crash.
+- [x] `/owner/repo/issues/N` → issue body (already works from 01).
+- [x] `/owner/repo/issues/N#issuecomment-ID` → that specific issue comment's body.
+- [x] `/owner/repo/pull/N` → PR description body.
+- [x] `/owner/repo/pull/N#discussion_rID` → that PR review comment; `#issuecomment-ID` on a PR → that issue-style comment.
+- [x] The stored `source_type` records which shape was analyzed.
+- [x] Unrecognized / unparseable URLs return a clear error, not a crash.

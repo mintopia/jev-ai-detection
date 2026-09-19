@@ -29,7 +29,7 @@ export function renderForm(error?: string): string {
   return page(
     "Jev Authorship Checker",
     `<h1>Jev Authorship Checker</h1>
-<p>Paste a public GitHub issue URL to check whether it was AI-written.</p>
+<p>Paste a public GitHub issue, PR, or comment URL to check whether it was AI-written.</p>
 ${errorHtml}
 <form method="post" action="/analyze">
   <input type="url" name="url" placeholder="https://github.com/owner/repo/issues/123" size="60" required>

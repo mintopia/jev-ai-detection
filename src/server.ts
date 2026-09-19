@@ -1,7 +1,7 @@
 import express from "express";
 import type { Database } from "better-sqlite3";
 import { parseGitHubUrl } from "./parseUrl.js";
-import { fetchIssueText } from "./github.js";
+import { fetchSourceText } from "./github.js";
 import { analyzeText } from "./jev.js";
 import { insertAnalysis, getAnalysis } from "./db.js";
 import { renderForm, renderResult } from "./render.js";
@@ -23,12 +23,12 @@ export function createApp({ db, apiKey }: AppDeps): express.Express {
     const rawUrl = typeof req.body.url === "string" ? req.body.url : "";
     const source = parseGitHubUrl(rawUrl);
     if (!source) {
-      res.status(400).type("html").send(renderForm("Enter a public GitHub issue URL like https://github.com/owner/repo/issues/123."));
+      res.status(400).type("html").send(renderForm("Enter a public GitHub issue, PR, or comment URL like https://github.com/owner/repo/issues/123."));
       return;
     }
 
     try {
-      const text = await fetchIssueText(source);
+      const text = await fetchSourceText(source);
       const result = await analyzeText(text, apiKey);
       const id = insertAnalysis(db, {
         source_url: rawUrl,

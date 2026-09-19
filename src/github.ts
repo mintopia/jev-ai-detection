@@ -1,7 +1,21 @@
 import type { ParsedSource } from "./parseUrl.js";
 
-export async function fetchIssueText(source: ParsedSource): Promise<string> {
-  const apiUrl = `https://api.github.com/repos/${source.owner}/${source.repo}/issues/${source.number}`;
+function buildApiUrl(source: ParsedSource): string {
+  const base = `https://api.github.com/repos/${source.owner}/${source.repo}`;
+  switch (source.kind) {
+    case "issue":
+      return `${base}/issues/${source.number}`;
+    case "pull":
+      return `${base}/pulls/${source.number}`;
+    case "issue-comment":
+      return `${base}/issues/comments/${source.commentId}`;
+    case "pull-review-comment":
+      return `${base}/pulls/comments/${source.commentId}`;
+  }
+}
+
+export async function fetchSourceText(source: ParsedSource): Promise<string> {
+  const apiUrl = buildApiUrl(source);
   const headers: Record<string, string> = {
     Accept: "application/vnd.github+json",
     "User-Agent": "jev-authorship-checker",
