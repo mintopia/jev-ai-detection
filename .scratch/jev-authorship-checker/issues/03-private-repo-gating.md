@@ -6,7 +6,7 @@
 
 **Status:** ready-for-agent
 
-- [ ] Repo visibility is checked (GitHub API) before fetching any issue/PR/comment text.
-- [ ] `GITHUB_TOKEN`, when set, is used for GitHub requests (raises rate limits, enables private-repo reads).
-- [ ] `ALLOW_PRIVATE_REPOS` defaults to false; when false, a private repo not in the allowlist is rejected with a clear "this repo is private and not permitted" message — no content fetch, no Jev call.
-- [ ] `PRIVATE_REPO_ALLOWLIST` (comma-separated `owner/repo`) permits listed private repos even when `ALLOW_PRIVATE_REPOS` is false.
+- [x] Repo visibility is checked (GitHub API) before fetching any issue/PR/comment text.
+- [x] `GITHUB_TOKEN`, when set, is used for GitHub requests (raises rate limits, enables private-repo reads).
+- [x] `ALLOW_PRIVATE_REPOS` defaults to false; when false, a private repo not in the allowlist is rejected with a clear "this repo is private and not permitted" message — no content fetch, no Jev call.
+- [x] `PRIVATE_REPO_ALLOWLIST` (comma-separated `owner/repo`) permits listed private repos even when `ALLOW_PRIVATE_REPOS` is false.

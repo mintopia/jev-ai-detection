@@ -1,0 +1,149 @@
+import { describe, it, expect, vi, afterEach } from "vitest";
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import { createApp } from "./server.js";
+import { openDb } from "./db.js";
+import type { Config } from "./config.js";
+
+function makeConfig(over: Partial<Config> = {}): Config {
+  return {
+    openRouterApiKey: "sk-test",
+    port: 0,
+    githubToken: undefined,
+    allowPrivateRepos: false,
+    privateRepoAllowlist: new Set<string>(),
+    ...over,
+  };
+}
+
+async function postAnalyze(config: Config, url: string): Promise<{ status: number; body: string }> {
+  const db = openDb(":memory:");
+  const app = createApp({ db, config });
+  const server = http.createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+
+  try {
+    const res = await new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const payload = `url=${encodeURIComponent(url)}`;
+      const req = http.request(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/analyze",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Length": Buffer.byteLength(payload),
+          },
+        },
+        (r) => {
+          let chunks = "";
+          r.on("data", (c) => (chunks += c));
+          r.on("end", () => resolve({ status: r.statusCode ?? 0, body: chunks }));
+        },
+      );
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
+    });
+    return res;
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    db.close();
+  }
+}
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("POST /analyze private-repo gating", () => {
+  it("blocks a private repo before any content fetch or Jev call", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        calls.push(u);
+        if (u === "https://api.github.com/repos/owner/secret") {
+          return { ok: true, status: 200, json: async () => ({ private: true }) };
+        }
+        throw new Error(`blocked path should never fetch: ${u}`);
+      }),
+    );
+
+    const res = await postAnalyze(makeConfig(), "https://github.com/owner/secret/issues/1");
+
+    expect(res.status).toBe(403);
+    expect(res.body).toContain("private and not permitted");
+    expect(calls).toEqual(["https://api.github.com/repos/owner/secret"]);
+  });
+
+  it("allows an allowlisted private repo through to fetch and Jev", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        calls.push(u);
+        if (u === "https://api.github.com/repos/owner/secret") {
+          return { ok: true, status: 200, json: async () => ({ private: true }) };
+        }
+        if (u === "https://api.github.com/repos/owner/secret/issues/1") {
+          return { ok: true, status: 200, json: async () => ({ body: "hello" }) };
+        }
+        if (u === "https://openrouter.ai/api/alpha/decisions") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              answers: {
+                is_ai: { noul: 0.9 },
+                which_ai: { choice: "claude", probabilities: { claude: 0.9 } },
+              },
+            }),
+          };
+        }
+        throw new Error(`unexpected fetch: ${u}`);
+      }),
+    );
+
+    const config = makeConfig({ privateRepoAllowlist: new Set(["owner/secret"]) });
+    const res = await postAnalyze(config, "https://github.com/owner/secret/issues/1");
+
+    expect(res.status).toBe(302);
+    expect(calls).toContain("https://api.github.com/repos/owner/secret/issues/1");
+    expect(calls).toContain("https://openrouter.ai/api/alpha/decisions");
+  });
+
+  it("lets a public repo through the gate", async () => {
+    const calls: string[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        calls.push(u);
+        if (u === "https://api.github.com/repos/owner/pub") {
+          return { ok: true, status: 200, json: async () => ({ private: false }) };
+        }
+        if (u === "https://api.github.com/repos/owner/pub/issues/1") {
+          return { ok: true, status: 200, json: async () => ({ body: "hi" }) };
+        }
+        if (u === "https://openrouter.ai/api/alpha/decisions") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              answers: {
+                is_ai: { noul: 0.1 },
+                which_ai: { choice: "human", probabilities: { human: 0.9 } },
+              },
+            }),
+          };
+        }
+        throw new Error(`unexpected fetch: ${u}`);
+      }),
+    );
+
+    const res = await postAnalyze(makeConfig(), "https://github.com/owner/pub/issues/1");
+    expect(res.status).toBe(302);
+  });
+});

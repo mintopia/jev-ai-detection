@@ -1,5 +1,33 @@
 import type { ParsedSource } from "./parseUrl.js";
 
+function githubHeaders(token?: string): Record<string, string> {
+  const headers: Record<string, string> = {
+    Accept: "application/vnd.github+json",
+    "User-Agent": "jev-authorship-checker",
+  };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
+}
+
+export interface RepoVisibility {
+  isPrivate: boolean;
+}
+
+export async function fetchRepoVisibility(owner: string, repo: string, token?: string): Promise<RepoVisibility> {
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}`;
+  const res = await fetch(apiUrl, { headers: githubHeaders(token) });
+  if (res.status === 404) {
+    return { isPrivate: true };
+  }
+  if (!res.ok) {
+    throw new Error(`GitHub API returned ${res.status} for ${apiUrl}`);
+  }
+  const data: unknown = await res.json();
+  return { isPrivate: (data as { private?: unknown })?.private === true };
+}
+
 function buildApiUrl(source: ParsedSource): string {
   const base = `https://api.github.com/repos/${source.owner}/${source.repo}`;
   switch (source.kind) {
@@ -14,17 +42,9 @@ function buildApiUrl(source: ParsedSource): string {
   }
 }
 
-export async function fetchSourceText(source: ParsedSource): Promise<string> {
+export async function fetchSourceText(source: ParsedSource, token?: string): Promise<string> {
   const apiUrl = buildApiUrl(source);
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github+json",
-    "User-Agent": "jev-authorship-checker",
-  };
-  if (process.env.GITHUB_TOKEN) {
-    headers.Authorization = `Bearer ${process.env.GITHUB_TOKEN}`;
-  }
-
-  const res = await fetch(apiUrl, { headers });
+  const res = await fetch(apiUrl, { headers: githubHeaders(token) });
   if (!res.ok) {
     throw new Error(`GitHub API returned ${res.status} for ${apiUrl}`);
   }

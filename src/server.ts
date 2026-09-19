@@ -1,17 +1,19 @@
 import express from "express";
 import type { Database } from "better-sqlite3";
+import type { Config } from "./config.js";
 import { parseGitHubUrl } from "./parseUrl.js";
-import { fetchSourceText } from "./github.js";
+import { fetchSourceText, fetchRepoVisibility } from "./github.js";
+import { isRepoAllowed } from "./gate.js";
 import { analyzeText } from "./jev.js";
 import { insertAnalysis, getAnalysis } from "./db.js";
 import { renderForm, renderResult } from "./render.js";
 
 export interface AppDeps {
   db: Database;
-  apiKey: string;
+  config: Config;
 }
 
-export function createApp({ db, apiKey }: AppDeps): express.Express {
+export function createApp({ db, config }: AppDeps): express.Express {
   const app = express();
   app.use(express.urlencoded({ extended: false }));
 
@@ -28,8 +30,17 @@ export function createApp({ db, apiKey }: AppDeps): express.Express {
     }
 
     try {
-      const text = await fetchSourceText(source);
-      const result = await analyzeText(text, apiKey);
+      const { isPrivate } = await fetchRepoVisibility(source.owner, source.repo, config.githubToken);
+      if (!isRepoAllowed(source.owner, source.repo, isPrivate, config)) {
+        res
+          .status(403)
+          .type("html")
+          .send(renderForm("This repository is private and not permitted."));
+        return;
+      }
+
+      const text = await fetchSourceText(source, config.githubToken);
+      const result = await analyzeText(text, config.openRouterApiKey);
       const id = insertAnalysis(db, {
         source_url: rawUrl,
         source_type: source.kind,

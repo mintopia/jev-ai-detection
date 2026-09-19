@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { fetchSourceText } from "./github.js";
+import { fetchSourceText, fetchRepoVisibility } from "./github.js";
 import type { ParsedSource } from "./parseUrl.js";
 
 function mockFetch(body: unknown, ok = true, status = 200) {
@@ -55,5 +55,45 @@ describe("fetchSourceText", () => {
     mockFetch(null, false, 404);
     const source: ParsedSource = { kind: "issue", owner: "a", repo: "b", number: 1 };
     await expect(fetchSourceText(source)).rejects.toThrow(/404/);
+  });
+
+  it("sends the token as a bearer header when provided", async () => {
+    const fn = mockFetch("x");
+    const source: ParsedSource = { kind: "issue", owner: "a", repo: "b", number: 1 };
+    await fetchSourceText(source, "ghp_secret");
+    const headers = fn.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers.Authorization).toBe("Bearer ghp_secret");
+  });
+
+  it("omits the Authorization header when no token is provided", async () => {
+    const fn = mockFetch("x");
+    const source: ParsedSource = { kind: "issue", owner: "a", repo: "b", number: 1 };
+    await fetchSourceText(source);
+    const headers = fn.mock.calls[0]?.[1]?.headers as Record<string, string>;
+    expect(headers.Authorization).toBeUndefined();
+  });
+});
+
+describe("fetchRepoVisibility", () => {
+  it("hits the repo endpoint and reports a public repo", async () => {
+    const fn = vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ private: false }) });
+    vi.stubGlobal("fetch", fn);
+    expect(await fetchRepoVisibility("a", "b")).toEqual({ isPrivate: false });
+    expect(fn.mock.calls[0]?.[0]).toBe("https://api.github.com/repos/a/b");
+  });
+
+  it("reports a private repo", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ private: true }) }));
+    expect(await fetchRepoVisibility("a", "b")).toEqual({ isPrivate: true });
+  });
+
+  it("treats a 404 as private (repo not visible without access)", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 404, json: async () => ({}) }));
+    expect(await fetchRepoVisibility("a", "b")).toEqual({ isPrivate: true });
+  });
+
+  it("throws on other non-ok statuses", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false, status: 500, json: async () => ({}) }));
+    await expect(fetchRepoVisibility("a", "b")).rejects.toThrow(/500/);
   });
 });

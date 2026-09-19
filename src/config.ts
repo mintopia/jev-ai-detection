@@ -1,6 +1,9 @@
 export interface Config {
   openRouterApiKey: string;
   port: number;
+  githubToken?: string;
+  allowPrivateRepos: boolean;
+  privateRepoAllowlist: Set<string>;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
@@ -14,5 +17,20 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     throw new Error(`PORT must be a positive integer, got: ${env.PORT}`);
   }
 
-  return { openRouterApiKey, port };
+  const allowPrivateRepos = env.ALLOW_PRIVATE_REPOS?.toLowerCase() === "true";
+
+  const privateRepoAllowlist = new Set(
+    (env.PRIVATE_REPO_ALLOWLIST ?? "")
+      .split(",")
+      .map((entry) => entry.trim().toLowerCase())
+      .filter(Boolean),
+  );
+
+  return {
+    openRouterApiKey,
+    port,
+    githubToken: env.GITHUB_TOKEN,
+    allowPrivateRepos,
+    privateRepoAllowlist,
+  };
 }
