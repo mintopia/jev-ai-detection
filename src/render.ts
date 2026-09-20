@@ -24,8 +24,17 @@ ${body}
 </html>`;
 }
 
-export function renderForm(error?: string): string {
+export interface FormOptions {
+  error?: string;
+  requirePassword?: boolean;
+}
+
+export function renderForm(opts: FormOptions = {}): string {
+  const { error, requirePassword = false } = opts;
   const errorHtml = error ? `<p role="alert">${escapeHtml(error)}</p>` : "";
+  const passwordHtml = requirePassword
+    ? `  <input type="password" name="password" placeholder="Submit password" required>\n`
+    : "";
   return page(
     "Jev Authorship Checker",
     `<h1>Jev Authorship Checker</h1>
@@ -33,7 +42,7 @@ export function renderForm(error?: string): string {
 ${errorHtml}
 <form method="post" action="/analyze">
   <input type="url" name="url" placeholder="https://github.com/owner/repo/issues/123" size="60" required>
-  <button type="submit">Analyze</button>
+${passwordHtml}  <button type="submit">Analyze</button>
 </form>`,
   );
 }

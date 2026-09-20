@@ -46,4 +46,26 @@ describe("loadConfig", () => {
     });
     expect(cfg.privateRepoAllowlist).toEqual(new Set(["owner/repo", "foo/bar"]));
   });
+
+  it("defaults the submit password to empty (open submit) and the anon rate to 5/min", () => {
+    const cfg = loadConfig({ OPENROUTER_API_KEY: "k" });
+    expect(cfg.submitPassword).toBe("");
+    expect(cfg.anonRatePerMin).toBe(5);
+  });
+
+  it("reads SUBMIT_PASSWORD verbatim when set", () => {
+    const cfg = loadConfig({ OPENROUTER_API_KEY: "k", SUBMIT_PASSWORD: "hunter2" });
+    expect(cfg.submitPassword).toBe("hunter2");
+  });
+
+  it("parses a custom anon rate", () => {
+    const cfg = loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "20" });
+    expect(cfg.anonRatePerMin).toBe(20);
+  });
+
+  it("throws on a non-positive or non-numeric anon rate", () => {
+    expect(() => loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "0" })).toThrow(/ANON_RATE_PER_MIN/);
+    expect(() => loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "-3" })).toThrow(/ANON_RATE_PER_MIN/);
+    expect(() => loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "abc" })).toThrow(/ANON_RATE_PER_MIN/);
+  });
 });

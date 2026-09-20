@@ -4,6 +4,8 @@ export interface Config {
   githubToken?: string;
   allowPrivateRepos: boolean;
   privateRepoAllowlist: Set<string>;
+  submitPassword: string;
+  anonRatePerMin: number;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
@@ -26,11 +28,18 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
       .filter(Boolean),
   );
 
+  const anonRatePerMin = env.ANON_RATE_PER_MIN ? Number(env.ANON_RATE_PER_MIN) : 5;
+  if (!Number.isFinite(anonRatePerMin) || anonRatePerMin <= 0) {
+    throw new Error(`ANON_RATE_PER_MIN must be a positive number, got: ${env.ANON_RATE_PER_MIN}`);
+  }
+
   return {
     openRouterApiKey,
     port,
     githubToken: env.GITHUB_TOKEN,
     allowPrivateRepos,
     privateRepoAllowlist,
+    submitPassword: env.SUBMIT_PASSWORD ?? "",
+    anonRatePerMin,
   };
 }

@@ -12,8 +12,50 @@ function makeConfig(over: Partial<Config> = {}): Config {
     githubToken: undefined,
     allowPrivateRepos: false,
     privateRepoAllowlist: new Set<string>(),
+    submitPassword: "",
+    anonRatePerMin: 5,
     ...over,
   };
+}
+
+async function makeServer(config: Config) {
+  const db = openDb(":memory:");
+  const app = createApp({ db, config });
+  const server = http.createServer(app);
+  await new Promise<void>((resolve) => server.listen(0, resolve));
+  const { port } = server.address() as AddressInfo;
+
+  const post = (fields: Record<string, string>) =>
+    new Promise<{ status: number; body: string }>((resolve, reject) => {
+      const payload = new URLSearchParams(fields).toString();
+      const req = http.request(
+        {
+          host: "127.0.0.1",
+          port,
+          path: "/analyze",
+          method: "POST",
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            "Content-Length": Buffer.byteLength(payload),
+          },
+        },
+        (r) => {
+          let chunks = "";
+          r.on("data", (c) => (chunks += c));
+          r.on("end", () => resolve({ status: r.statusCode ?? 0, body: chunks }));
+        },
+      );
+      req.on("error", reject);
+      req.write(payload);
+      req.end();
+    });
+
+  const close = async () => {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    db.close();
+  };
+
+  return { post, close };
 }
 
 async function postAnalyze(config: Config, url: string): Promise<{ status: number; body: string }> {
@@ -145,5 +187,74 @@ describe("POST /analyze private-repo gating", () => {
 
     const res = await postAnalyze(makeConfig(), "https://github.com/owner/pub/issues/1");
     expect(res.status).toBe(302);
+  });
+});
+
+describe("POST /analyze submit gating", () => {
+  it("rejects submission without the password when SUBMIT_PASSWORD is set", async () => {
+    const { post, close } = await makeServer(makeConfig({ submitPassword: "s3cret" }));
+    try {
+      const res = await post({ url: "https://github.com/owner/pub/issues/1" });
+      expect(res.status).toBe(401);
+      expect(res.body).toContain("password is required");
+      expect(res.body).toContain('name="password"');
+    } finally {
+      await close();
+    }
+  });
+
+  it("lets the correct password bypass the rate limit", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (u: string) => {
+        if (u === "https://api.github.com/repos/owner/pub") {
+          return { ok: true, status: 200, json: async () => ({ private: false }) };
+        }
+        if (u === "https://api.github.com/repos/owner/pub/issues/1") {
+          return { ok: true, status: 200, json: async () => ({ body: "hi" }) };
+        }
+        if (u === "https://openrouter.ai/api/alpha/decisions") {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              answers: {
+                is_ai: { noul: 0.1 },
+                which_ai: { choice: "human", probabilities: { human: 0.9 } },
+              },
+            }),
+          };
+        }
+        throw new Error(`unexpected fetch: ${u}`);
+      }),
+    );
+
+    const { post, close } = await makeServer(
+      makeConfig({ submitPassword: "s3cret", anonRatePerMin: 1 }),
+    );
+    try {
+      for (let i = 0; i < 3; i++) {
+        const res = await post({
+          url: "https://github.com/owner/pub/issues/1",
+          password: "s3cret",
+        });
+        expect(res.status).toBe(302);
+      }
+    } finally {
+      await close();
+    }
+  });
+
+  it("rate-limits anonymous submissions past the configured rate", async () => {
+    const { post, close } = await makeServer(makeConfig({ anonRatePerMin: 1 }));
+    try {
+      const first = await post({ url: "not-a-valid-url" });
+      expect(first.status).toBe(400);
+      const second = await post({ url: "not-a-valid-url" });
+      expect(second.status).toBe(429);
+      expect(second.body).toContain("Rate limited");
+    } finally {
+      await close();
+    }
   });
 });

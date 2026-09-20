@@ -1,6 +1,22 @@
 import { describe, it, expect } from "vitest";
-import { escapeHtml, renderResult } from "./render.js";
+import { escapeHtml, renderForm, renderResult } from "./render.js";
 import type { Analysis } from "./db.js";
+
+describe("renderForm", () => {
+  it("omits the password field by default", () => {
+    expect(renderForm()).not.toContain('name="password"');
+  });
+
+  it("shows a password field when submission requires a password", () => {
+    const html = renderForm({ requirePassword: true });
+    expect(html).toContain('type="password"');
+    expect(html).toContain('name="password"');
+  });
+
+  it("renders an escaped error message", () => {
+    expect(renderForm({ error: "<bad>" })).toContain("&lt;bad&gt;");
+  });
+});
 
 describe("escapeHtml", () => {
   it("escapes all HTML-significant characters", () => {

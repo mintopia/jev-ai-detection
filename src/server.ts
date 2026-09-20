@@ -7,6 +7,7 @@ import { isRepoAllowed } from "./gate.js";
 import { analyzeText } from "./jev.js";
 import { insertAnalysis, getAnalysis } from "./db.js";
 import { renderForm, renderResult } from "./render.js";
+import { createRateLimiter, clientIpKey, checkSubmitAccess } from "./rateLimit.js";
 
 export interface AppDeps {
   db: Database;
@@ -17,15 +18,35 @@ export function createApp({ db, config }: AppDeps): express.Express {
   const app = express();
   app.use(express.urlencoded({ extended: false }));
 
+  const requirePassword = config.submitPassword !== "";
+  const limiter = createRateLimiter({ ratePerMin: config.anonRatePerMin });
+  const form = (error?: string): string => renderForm({ error, requirePassword });
+
   app.get("/", (_req, res) => {
-    res.type("html").send(renderForm());
+    res.type("html").send(form());
   });
 
   app.post("/analyze", async (req, res) => {
+    const providedPassword = typeof req.body.password === "string" ? req.body.password : "";
+    const clientIp = req.ip ?? req.socket.remoteAddress ?? "";
+    const access = checkSubmitAccess({
+      submitPassword: config.submitPassword,
+      providedPassword,
+      consumeRate: () => limiter.tryConsume(clientIpKey(clientIp)),
+    });
+    if (access.kind === "password-required") {
+      res.status(401).type("html").send(form("A submit password is required."));
+      return;
+    }
+    if (access.kind === "rate-limited") {
+      res.status(429).type("html").send(form("Rate limited — please try again shortly."));
+      return;
+    }
+
     const rawUrl = typeof req.body.url === "string" ? req.body.url : "";
     const source = parseGitHubUrl(rawUrl);
     if (!source) {
-      res.status(400).type("html").send(renderForm("Enter a public GitHub issue, PR, or comment URL like https://github.com/owner/repo/issues/123."));
+      res.status(400).type("html").send(form("Enter a public GitHub issue, PR, or comment URL like https://github.com/owner/repo/issues/123."));
       return;
     }
 
@@ -35,7 +56,7 @@ export function createApp({ db, config }: AppDeps): express.Express {
         res
           .status(403)
           .type("html")
-          .send(renderForm("This repository is private and not permitted."));
+          .send(form("This repository is private and not permitted."));
         return;
       }
 
@@ -52,14 +73,14 @@ export function createApp({ db, config }: AppDeps): express.Express {
       res.redirect(`/r/${id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Analysis failed.";
-      res.status(502).type("html").send(renderForm(message));
+      res.status(502).type("html").send(form(message));
     }
   });
 
   app.get("/r/:id", (req, res) => {
     const row = getAnalysis(db, req.params.id);
     if (!row) {
-      res.status(404).type("html").send(renderForm("No analysis found for that link."));
+      res.status(404).type("html").send(form("No analysis found for that link."));
       return;
     }
     res.type("html").send(renderResult(row));
