@@ -16,6 +16,8 @@ export interface AppDeps {
 
 export function createApp({ db, config }: AppDeps): express.Express {
   const app = express();
+  // Governs how req.ip (the rate-limit key) resolves behind a proxy/relay.
+  app.set("trust proxy", config.trustProxy);
   app.use(express.urlencoded({ extended: false }));
 
   const requirePassword = config.submitPassword !== "";

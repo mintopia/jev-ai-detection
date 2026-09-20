@@ -68,4 +68,16 @@ describe("loadConfig", () => {
     expect(() => loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "-3" })).toThrow(/ANON_RATE_PER_MIN/);
     expect(() => loadConfig({ OPENROUTER_API_KEY: "k", ANON_RATE_PER_MIN: "abc" })).toThrow(/ANON_RATE_PER_MIN/);
   });
+
+  it("defaults trust proxy to false (direct connection)", () => {
+    expect(loadConfig({ OPENROUTER_API_KEY: "k" }).trustProxy).toBe(false);
+    expect(loadConfig({ OPENROUTER_API_KEY: "k", TRUST_PROXY: "" }).trustProxy).toBe(false);
+    expect(loadConfig({ OPENROUTER_API_KEY: "k", TRUST_PROXY: "false" }).trustProxy).toBe(false);
+  });
+
+  it("parses TRUST_PROXY as a hop count, boolean, or passthrough value", () => {
+    expect(loadConfig({ OPENROUTER_API_KEY: "k", TRUST_PROXY: "1" }).trustProxy).toBe(1);
+    expect(loadConfig({ OPENROUTER_API_KEY: "k", TRUST_PROXY: "true" }).trustProxy).toBe(true);
+    expect(loadConfig({ OPENROUTER_API_KEY: "k", TRUST_PROXY: "loopback" }).trustProxy).toBe("loopback");
+  });
 });

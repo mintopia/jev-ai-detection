@@ -6,6 +6,18 @@ export interface Config {
   privateRepoAllowlist: Set<string>;
   submitPassword: string;
   anonRatePerMin: number;
+  trustProxy: boolean | number | string;
+}
+
+// Express "trust proxy" setting: false (direct), a hop count, or a passthrough
+// value like "loopback" / a subnet. Governs how req.ip resolves the client IP.
+function parseTrustProxy(raw: string | undefined): boolean | number | string {
+  const v = (raw ?? "").trim();
+  if (v === "" || v.toLowerCase() === "false") return false;
+  if (v.toLowerCase() === "true") return true;
+  const n = Number(v);
+  if (Number.isInteger(n) && n >= 0) return n;
+  return v;
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
@@ -41,5 +53,6 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     privateRepoAllowlist,
     submitPassword: env.SUBMIT_PASSWORD ?? "",
     anonRatePerMin,
+    trustProxy: parseTrustProxy(env.TRUST_PROXY),
   };
 }

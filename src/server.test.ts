@@ -14,6 +14,7 @@ function makeConfig(over: Partial<Config> = {}): Config {
     privateRepoAllowlist: new Set<string>(),
     submitPassword: "",
     anonRatePerMin: 5,
+    trustProxy: false,
     ...over,
   };
 }
@@ -25,7 +26,7 @@ async function makeServer(config: Config) {
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
 
-  const post = (fields: Record<string, string>) =>
+  const post = (fields: Record<string, string>, headers: Record<string, string> = {}) =>
     new Promise<{ status: number; body: string }>((resolve, reject) => {
       const payload = new URLSearchParams(fields).toString();
       const req = http.request(
@@ -37,6 +38,7 @@ async function makeServer(config: Config) {
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
             "Content-Length": Buffer.byteLength(payload),
+            ...headers,
           },
         },
         (r) => {
@@ -253,6 +255,30 @@ describe("POST /analyze submit gating", () => {
       const second = await post({ url: "not-a-valid-url" });
       expect(second.status).toBe(429);
       expect(second.body).toContain("Rate limited");
+    } finally {
+      await close();
+    }
+  });
+
+  it("keys the rate limit on the forwarded client IP, not the proxy socket", async () => {
+    const { post, close } = await makeServer(makeConfig({ anonRatePerMin: 1, trustProxy: 1 }));
+    try {
+      // Same forwarded IP twice -> second is limited.
+      expect((await post({ url: "bad" }, { "X-Forwarded-For": "203.0.113.9" })).status).toBe(400);
+      expect((await post({ url: "bad" }, { "X-Forwarded-For": "203.0.113.9" })).status).toBe(429);
+      // A different forwarded IP has its own bucket and is allowed.
+      expect((await post({ url: "bad" }, { "X-Forwarded-For": "198.51.100.4" })).status).toBe(400);
+    } finally {
+      await close();
+    }
+  });
+
+  it("ignores X-Forwarded-For when trust proxy is off (spoof cannot dodge the limit)", async () => {
+    const { post, close } = await makeServer(makeConfig({ anonRatePerMin: 1 }));
+    try {
+      expect((await post({ url: "bad" }, { "X-Forwarded-For": "203.0.113.1" })).status).toBe(400);
+      // Different spoofed IP, but trust proxy is off so both key off the real socket.
+      expect((await post({ url: "bad" }, { "X-Forwarded-For": "203.0.113.2" })).status).toBe(429);
     } finally {
       await close();
     }
