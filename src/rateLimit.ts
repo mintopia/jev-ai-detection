@@ -48,7 +48,7 @@ interface RateLimiterOptions {
   now?: () => number;
 }
 
-const EPSILON = 1e-9;
+const FLOAT_TOLERANCE = 1e-9;
 
 // Leaky bucket: capacity equals ratePerMin, draining ratePerMin tokens per minute.
 export function createRateLimiter({ ratePerMin, now = Date.now }: RateLimiterOptions): RateLimiter {
@@ -75,7 +75,7 @@ export function createRateLimiter({ ratePerMin, now = Date.now }: RateLimiterOpt
       const leaked = (t - bucket.last) * perMs;
       const level = Math.max(0, bucket.level - leaked);
 
-      if (level + 1 > capacity + EPSILON) {
+      if (level + 1 > capacity + FLOAT_TOLERANCE) {
         buckets.set(key, { level, last: t });
         return false;
       }
