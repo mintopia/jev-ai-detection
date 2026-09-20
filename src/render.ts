@@ -65,9 +65,17 @@ a:hover { text-decoration: underline; }
 .brand { font-size: 16px; font-weight: 600; color: var(--fg); text-decoration: none; }
 .brand:hover { text-decoration: none; }
 .brand svg { color: var(--fg); vertical-align: -3px; margin-right: 8px; }
-.nav { margin-left: auto; display: flex; gap: 18px; }
+.nav { margin-left: auto; display: flex; align-items: center; gap: 18px; }
 .nav a { font-size: 14px; color: var(--fg-muted); }
 .nav a:hover { color: var(--fg); }
+.nav-logout { margin: 0; display: flex; }
+.nav-logout button {
+  padding: 0; border: 0; background: none;
+  font-family: var(--sans); font-size: 14px; line-height: inherit;
+  color: var(--fg-muted); cursor: pointer;
+}
+.nav-logout button:hover { color: var(--fg); }
+.nav-logout button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 3px; }
 .main { padding: 28px 0 56px; }
 
 .card {
@@ -261,7 +269,10 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
 }
 `;
 
-function page(title: string, body: string): string {
+function page(title: string, body: string, loggedIn = false): string {
+  const logout = loggedIn
+    ? `<form class="nav-logout" method="post" action="/logout"><button type="submit">Log out</button></form>`
+    : "";
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -272,7 +283,7 @@ function page(title: string, body: string): string {
 <style>${STYLES}</style>
 </head>
 <body>
-<header class="topbar"><div class="wrap"><a class="brand" href="/">${LOGO_SVG}AI Content Detector</a><nav class="nav"><a href="/">Home</a><a href="/analyze">Analyse</a></nav></div></header>
+<header class="topbar"><div class="wrap"><a class="brand" href="/">${LOGO_SVG}AI Content Detector</a><nav class="nav"><a href="/">Home</a><a href="/analyze">Analyse</a>${logout}</nav></div></header>
 <main class="wrap main">
 ${body}
 </main>
@@ -361,10 +372,11 @@ const SCRIPT = `<script>
 
 export interface FormOptions {
   error?: string;
+  loggedIn?: boolean;
 }
 
 export function renderForm(opts: FormOptions = {}): string {
-  const { error } = opts;
+  const { error, loggedIn = false } = opts;
   const errorHtml = error
     ? `<p class="alert" role="alert">${WARN_SVG}<span>${escapeHtml(error)}</span></p>`
     : "";
@@ -381,6 +393,7 @@ ${errorHtml}<form class="probe" method="post" action="/analyze">
   <button class="btn btn-primary" type="submit" data-loading="Analysing…">Analyse ${ARROW_SVG}</button>
 </form>
 </div>`,
+    loggedIn,
   );
 }
 
@@ -404,7 +417,7 @@ ${errorHtml}<form class="probe" method="post" action="/login">
   );
 }
 
-export function renderLanding(): string {
+export function renderLanding(loggedIn = false): string {
   const critRows = Object.entries(WHICH_AI_CRITERIA)
     .map(
       ([label, desc]) =>
@@ -446,6 +459,7 @@ ${critRows}
 <p class="prose">This app is open source. Read it, run it yourself, or open an issue at <a href="${escapeHtml(REPO_URL)}">${escapeHtml(REPO_URL.replace("https://", ""))}</a>.</p>
 </div>
 <div class="actions"><a class="btn btn-primary" href="/analyze">Analyse a URL ${ARROW_SVG}</a></div>`,
+    loggedIn,
   );
 }
 
@@ -528,7 +542,7 @@ function renderProbabilityBars(json: string): string {
   return `<ul class="prob-bars">\n${rows}\n</ul>`;
 }
 
-export function renderResult(a: Analysis): string {
+export function renderResult(a: Analysis, loggedIn = false): string {
   const verdict = verdictFromNoul(a.is_ai_noul);
   const pct = Math.round(a.is_ai_noul * 100);
   const markerPct = Math.max(0, Math.min(100, pct));
@@ -606,5 +620,6 @@ ${usageCard}<p class="source">Source: <a href="${escapeHtml(a.source_url)}">${es
 </div>
 </div>
 <div class="actions"><a class="btn" href="/">Analyse another</a></div>`,
+    loggedIn,
   );
 }

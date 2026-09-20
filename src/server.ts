@@ -27,9 +27,13 @@ export function createApp({ db, config }: AppDeps): express.Express {
   const limiter = createRateLimiter({ ratePerMin: config.anonRatePerMin });
   const isAuthed = (req: express.Request): boolean =>
     !requirePassword || hasValidSession(req.headers.cookie, config.submitPassword);
+  // "Logged in" means an active session exists — distinct from isAuthed, which is
+  // also true when no password is configured. Only a real session can be logged out.
+  const isLoggedIn = (req: express.Request): boolean =>
+    requirePassword && hasValidSession(req.headers.cookie, config.submitPassword);
 
-  app.get("/", (_req, res) => {
-    res.type("html").send(renderLanding());
+  app.get("/", (req, res) => {
+    res.type("html").send(renderLanding(isLoggedIn(req)));
   });
 
   app.get("/analyze", (req, res) => {
@@ -37,7 +41,12 @@ export function createApp({ db, config }: AppDeps): express.Express {
       res.type("html").send(renderPasswordPrompt());
       return;
     }
-    res.type("html").send(renderForm());
+    res.type("html").send(renderForm({ loggedIn: isLoggedIn(req) }));
+  });
+
+  app.post("/logout", (req, res) => {
+    res.clearCookie(AUTH_COOKIE, { path: "/" });
+    res.redirect("/");
   });
 
   app.post("/login", (req, res) => {
@@ -79,14 +88,14 @@ export function createApp({ db, config }: AppDeps): express.Express {
       res
         .status(400)
         .type("html")
-        .send(renderForm({ error: "Enter a public GitHub issue, PR, or comment URL like https://github.com/owner/repo/issues/123." }));
+        .send(renderForm({ error: "Enter a public GitHub issue, PR, or comment URL like https://github.com/owner/repo/issues/123.", loggedIn: isLoggedIn(req) }));
       return;
     }
 
     try {
       const { isPrivate } = await fetchRepoVisibility(source.owner, source.repo, config.githubToken);
       if (!isRepoAllowed(source.owner, source.repo, isPrivate, config)) {
-        res.status(403).type("html").send(renderForm({ error: "This repository is private and not permitted." }));
+        res.status(403).type("html").send(renderForm({ error: "This repository is private and not permitted.", loggedIn: isLoggedIn(req) }));
         return;
       }
 
@@ -110,17 +119,20 @@ export function createApp({ db, config }: AppDeps): express.Express {
       res.redirect(`/r/${id}`);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Analysis failed.";
-      res.status(502).type("html").send(renderForm({ error: message }));
+      res.status(502).type("html").send(renderForm({ error: message, loggedIn: isLoggedIn(req) }));
     }
   });
 
   app.get("/r/:id", (req, res) => {
     const row = getAnalysis(db, req.params.id);
     if (!row) {
-      res.status(404).type("html").send(renderForm({ error: "No analysis found for that link." }));
+      res
+        .status(404)
+        .type("html")
+        .send(renderForm({ error: "No analysis found for that link.", loggedIn: isLoggedIn(req) }));
       return;
     }
-    res.type("html").send(renderResult(row));
+    res.type("html").send(renderResult(row, isLoggedIn(req)));
   });
 
   return app;
