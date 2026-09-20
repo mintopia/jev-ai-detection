@@ -23,17 +23,18 @@ export function escapeHtml(s: string): string {
 
 const STYLES = `
 :root {
-  --canvas: #0d1117;
-  --surface: #161b22;
-  --border: #30363d;
-  --border-muted: #21262d;
-  --fg: #e6edf3;
-  --fg-muted: #8b949e;
-  --accent: #2f81f7;
-  --btn-primary: #238636;
-  --btn-primary-hover: #2ea043;
-  --btn-primary-border: rgba(240,246,252,0.1);
-  --track: #21262d;
+  --canvas: #0c0e18;
+  --surface: #14162a;
+  --border: #282c48;
+  --border-muted: #1e2138;
+  --fg: #e9e9f5;
+  --fg-muted: #9a9cc0;
+  --accent: #7c6cff;
+  --human-accent: #3fb950;
+  --btn-primary: #5a4bd4;
+  --btn-primary-hover: #6a5ce6;
+  --btn-primary-border: rgba(124,108,255,0.35);
+  --track: #1e2138;
   --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
   --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
 }
@@ -52,7 +53,7 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-::selection { background: rgba(56,139,253,0.4); }
+::selection { background: rgba(124,108,255,0.38); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 
 a { color: var(--accent); text-decoration: none; }
@@ -96,8 +97,8 @@ input[type="url"], input[type="password"], input[type="text"] {
   font-size: 13px;
   line-height: 20px;
 }
-input::placeholder { color: #8c959f; }
-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(9,105,218,0.3); }
+input::placeholder { color: #6b6f95; }
+input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,108,255,0.28); }
 
 .btn {
   justify-self: start;
@@ -105,7 +106,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   padding: 6px 16px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background: #21262d;
+  background: #1b1e36;
   color: var(--fg);
   font-family: var(--sans);
   font-size: 14px; font-weight: 500;
@@ -114,8 +115,8 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   transition: background .12s ease, border-color .12s ease;
   text-decoration: none;
 }
-.btn:hover { background: #30363d; border-color: #8b949e; text-decoration: none; }
-.btn:active { background: #282e33; }
+.btn:hover { background: #24284a; border-color: #4a4f7a; text-decoration: none; }
+.btn:active { background: #202445; }
 .btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .btn-primary {
   background: var(--btn-primary);
@@ -124,7 +125,7 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   box-shadow: 0 1px 0 rgba(31,35,40,0.04);
 }
 .btn-primary:hover { background: var(--btn-primary-hover); border-color: var(--btn-primary-border); }
-.btn-primary:active { background: #187733; }
+.btn-primary:active { background: #4a3dc0; }
 .is-running .btn-primary { opacity: 0.7; cursor: progress; }
 
 .alert {
@@ -162,19 +163,20 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px 
   height: 8px; border-radius: 4px;
   border: 1px solid rgba(240,246,252,0.1);
   background: linear-gradient(90deg,
-    rgba(74,194,107,0.25) 0 40%,
-    rgba(212,167,44,0.25) 40% 60%,
-    rgba(255,129,130,0.3) 60% 100%);
+    rgba(63,185,80,0.55) 0 40%,
+    rgba(210,153,34,0.5) 40% 60%,
+    rgba(255,123,114,0.6) 60% 100%);
 }
-.scale-track .tick { position: absolute; top: 22px; width: 1px; height: 8px; background: rgba(240,246,252,0.24); }
-.scale-marker { position: absolute; top: 15px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
-.scale-marker .flag {
+.scale-track .tick { position: absolute; top: 22px; width: 1px; height: 8px; background: var(--canvas); box-shadow: 0 0 0 0.5px rgba(240,246,252,0.35); }
+.scale-flag {
+  position: absolute; top: 15px; transform: translateX(-50%);
   font-family: var(--mono); font-size: 12px; font-weight: 600;
-  color: #0d1117; background: var(--tone);
-  padding: 1px 6px; border-radius: 4px; margin-bottom: 5px;
+  color: #0c0e18; background: var(--tone);
+  padding: 1px 6px; border-radius: 4px;
   white-space: nowrap; font-variant-numeric: tabular-nums;
 }
-.scale-marker .needle { width: 2px; height: 20px; background: var(--tone); }
+.scale-marker { position: absolute; top: 33px; transform: translateX(-50%); }
+.scale-marker .needle { display: block; width: 2px; height: 20px; background: var(--tone); border-radius: 1px; }
 .scale-legend { display: flex; margin-top: 10px; font-size: 12px; color: var(--fg-muted); }
 .scale-legend .z-human { width: 40%; }
 .scale-legend .z-uncertain { width: 20%; text-align: center; }
@@ -196,6 +198,9 @@ progress {
 progress::-webkit-progress-bar { background: var(--track); border-radius: 4px; }
 progress::-webkit-progress-value { background: var(--accent); border-radius: 4px; }
 progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
+.prob-bars li.is-human > span:first-child { color: var(--human-accent); font-weight: 600; }
+.prob-bars li.is-human progress::-webkit-progress-value { background: var(--human-accent); }
+.prob-bars li.is-human progress::-moz-progress-bar { background: var(--human-accent); }
 
 .code {
   margin: 0; padding: 16px;
@@ -216,6 +221,20 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
 .share input { flex: 1 1 auto; min-width: 0; }
 .share .btn { flex: none; }
 
+.usage-card > summary {
+  cursor: pointer; list-style: none;
+  display: flex; align-items: center; gap: 8px;
+  font-size: 14px; font-weight: 600; color: var(--fg-muted);
+}
+.usage-card > summary:hover { color: var(--fg); }
+.usage-card > summary::-webkit-details-marker { display: none; }
+.usage-card > summary::before {
+  content: ""; width: 6px; height: 6px; flex: none;
+  border-right: 1.5px solid currentColor; border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg); transition: transform .15s ease;
+}
+.usage-card[open] > summary { margin-bottom: 16px; color: var(--fg); }
+.usage-card[open] > summary::before { transform: rotate(45deg); }
 .usage { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
 .usage li { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; padding: 9px 0; border-bottom: 1px solid var(--border-muted); }
 .usage li:first-child { padding-top: 0; }
@@ -270,6 +289,41 @@ const WARN_SVG = `<svg width="16" height="16" viewBox="0 0 16 16" fill="currentC
 
 const SCRIPT = `<script>
 (function(){
+  // Gauge reveal: the needle sweeps to its reading and the percentage settles,
+  // like an instrument coming to rest. Rendered at final value first, so it is
+  // correct without JS; motion is skipped when the user prefers reduced motion.
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var marker = document.querySelector('.scale-marker');
+  var flag = document.querySelector('.scale-flag');
+  var pctEl = document.querySelector('.gauge-pct');
+  if (!reduce && marker) {
+    var ease = 'left .9s cubic-bezier(.22,1,.36,1)';
+    [marker, flag].forEach(function(el){
+      if (!el) return;
+      var target = el.style.left;
+      el.style.transition = 'none';
+      el.style.left = '50%';
+      void el.offsetWidth;
+      el.style.transition = ease;
+      requestAnimationFrame(function(){ el.style.left = target; });
+    });
+    if (pctEl) {
+      var end = parseInt(pctEl.getAttribute('data-value'), 10);
+      if (!isNaN(end)) {
+        var dur = 900, t0 = 0;
+        var step = function(now){
+          if (!t0) t0 = now;
+          var p = Math.min(1, (now - t0) / dur);
+          var eased = 1 - Math.pow(1 - p, 3);
+          pctEl.textContent = Math.round(end * eased) + '%';
+          if (p < 1) requestAnimationFrame(step);
+          else pctEl.textContent = end + '%';
+        };
+        requestAnimationFrame(step);
+      }
+    }
+  }
+
   var f = document.querySelector('form.probe');
   if (f) f.addEventListener('submit', function(e){
     if (f.classList.contains('is-running')) { e.preventDefault(); return; }
@@ -456,12 +510,15 @@ function mostLikelyLabel(probs: Record<string, number>, exclude: string | null):
 }
 
 function renderProbabilityBars(json: string): string {
-  const entries = Object.entries(parseProbabilities(json)).sort((a, b) => b[1] - a[1]);
-  if (entries.length === 0) return "<p class=\"most-likely\">No per-label breakdown available.</p>";
+  const all = Object.entries(parseProbabilities(json)).sort((a, b) => b[1] - a[1]);
+  if (all.length === 0) return "<p class=\"most-likely\">No per-label breakdown available.</p>";
+  const shown = all.filter(([, p]) => Math.round(p * 100) >= 1);
+  const entries = shown.length > 0 ? shown : all.slice(0, 1);
   const rows = entries
     .map(([label, p]) => {
       const pct = Math.round(p * 100);
-      return `<li>
+      const cls = label.toLowerCase() === "human" ? ' class="is-human"' : "";
+      return `<li${cls}>
   <span>${escapeHtml(label)}</span>
   <progress value="${p}" max="1">${pct}%</progress>
   <span>${pct}%</span>
@@ -496,8 +553,8 @@ ${renderProbabilityBars(a.probabilities_json)}
   const hasUsage =
     a.elapsed_ms != null || a.input_tokens != null || a.output_tokens != null || a.cost_usd != null;
   const usageCard = hasUsage
-    ? `<div class="card">
-<h2 class="h2">Usage</h2>
+    ? `<details class="card usage-card">
+<summary>Usage &amp; cost</summary>
 <ul class="usage">
   <li><span>Time</span><span>${formatDuration(a.elapsed_ms)}</span></li>
   <li><span>Input tokens</span><span>${formatTokens(a.input_tokens)}</span></li>
@@ -505,7 +562,7 @@ ${renderProbabilityBars(a.probabilities_json)}
   <li><span>Total tokens</span><span>${formatTokens(totalTokens)}</span></li>
   <li><span>Estimated cost</span><span>${formatCost(a.cost_usd)}</span></li>
 </ul>
-</div>
+</details>
 `
     : "";
 
@@ -516,7 +573,7 @@ ${renderProbabilityBars(a.probabilities_json)}
 <p class="verdict-sub">${VERDICT_SUB[verdict]}</p>
 <div class="gauge">
   <div class="gauge-head">
-    <span class="gauge-pct">${pct}%</span>
+    <span class="gauge-pct" data-value="${pct}">${pct}%</span>
     <span class="gauge-cap">estimated probability this text is AI-written</span>
   </div>
   <div class="scale">
@@ -524,8 +581,8 @@ ${renderProbabilityBars(a.probabilities_json)}
       <span class="tick" style="left:40%"></span>
       <span class="tick" style="left:60%"></span>
     </div>
+    <span class="scale-flag" style="left:clamp(3%, ${markerPct}%, 97%)">${pct}%</span>
     <div class="scale-marker" style="left:${markerPct}%">
-      <span class="flag">${pct}%</span>
       <span class="needle"></span>
     </div>
   </div>

@@ -11,7 +11,7 @@ Paste a public GitHub URL. The app fetches the text, sends it to Jev (a decision
 3. It asks Jev two questions in one call: is this AI-written (scored 0 to 1), and which model wrote it.
 4. The server stores the result in SQLite and shows it on its own shareable page.
 
-The exact prompt is on the app's `/about` page.
+The exact prompt is shown on the app's home page.
 
 ## Requirements
 

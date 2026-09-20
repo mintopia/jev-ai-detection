@@ -32,10 +32,6 @@ export function createApp({ db, config }: AppDeps): express.Express {
     res.type("html").send(renderLanding());
   });
 
-  app.get("/about", (_req, res) => {
-    res.redirect(301, "/");
-  });
-
   app.get("/analyze", (req, res) => {
     if (!isAuthed(req)) {
       res.type("html").send(renderPasswordPrompt());
