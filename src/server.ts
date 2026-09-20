@@ -6,7 +6,7 @@ import { fetchSourceText, fetchRepoVisibility } from "./github.js";
 import { isRepoAllowed } from "./gate.js";
 import { analyzeText } from "./jev.js";
 import { insertAnalysis, getAnalysis } from "./db.js";
-import { renderForm, renderResult } from "./render.js";
+import { renderForm, renderResult, renderAbout } from "./render.js";
 import { createRateLimiter, clientIpKey, checkSubmitAccess } from "./rateLimit.js";
 
 export interface AppDeps {
@@ -26,6 +26,10 @@ export function createApp({ db, config }: AppDeps): express.Express {
 
   app.get("/", (_req, res) => {
     res.type("html").send(form());
+  });
+
+  app.get("/about", (_req, res) => {
+    res.type("html").send(renderAbout());
   });
 
   app.post("/analyze", async (req, res) => {

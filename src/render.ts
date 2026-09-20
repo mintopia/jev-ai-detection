@@ -1,5 +1,12 @@
 import type { Analysis } from "./db.js";
 import { verdictFromNoul, type Verdict } from "./verdict.js";
+import {
+  IS_AI_INSTRUCTIONS,
+  WHICH_AI_INSTRUCTIONS,
+  WHICH_AI_CRITERIA,
+} from "./jev.js";
+
+const REPO_URL = "https://github.com/mintopia/jev-ai-detection";
 
 export function escapeHtml(s: string): string {
   return s
@@ -50,8 +57,12 @@ a:hover { text-decoration: underline; }
 .topbar { background: var(--surface); border-bottom: 1px solid var(--border); }
 .wrap { width: min(768px, 100% - 32px); margin: 0 auto; }
 .topbar .wrap { display: flex; align-items: center; gap: 8px; height: 56px; }
-.brand { font-size: 16px; font-weight: 600; color: var(--fg); }
+.brand { font-size: 16px; font-weight: 600; color: var(--fg); text-decoration: none; }
+.brand:hover { text-decoration: none; }
 .brand svg { color: var(--fg); vertical-align: -3px; margin-right: 8px; }
+.nav { margin-left: auto; display: flex; gap: 18px; }
+.nav a { font-size: 14px; color: var(--fg-muted); }
+.nav a:hover { color: var(--fg); }
 .main { padding: 28px 0 56px; }
 
 .card {
@@ -197,8 +208,19 @@ progress::-moz-progress-bar { background: var(--accent); border-radius: 4px; }
 .source { margin: 16px 0 0; font-size: 13px; color: var(--fg-muted); }
 .source a { overflow-wrap: anywhere; }
 
+.steps { margin: 0; padding-left: 20px; display: grid; gap: 8px; }
+.steps li { padding-left: 4px; }
+.prose { margin: 0 0 12px; max-width: 62ch; }
+.prose:last-child { margin-bottom: 0; }
+.about-q { margin: 18px 0 6px; font-size: 14px; font-weight: 600; }
+.about-q:first-of-type { margin-top: 0; }
+.crit { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.crit li { display: grid; grid-template-columns: 92px 1fr; gap: 12px; font-size: 13px; align-items: baseline; }
+.crit code { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+
 @media (max-width: 480px) {
   .prob-bars li { grid-template-columns: 64px 1fr 40px; gap: 10px; }
+  .crit li { grid-template-columns: 72px 1fr; }
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation: none !important; transition: none !important; }
@@ -216,7 +238,7 @@ function page(title: string, body: string): string {
 <style>${STYLES}</style>
 </head>
 <body>
-<header class="topbar"><div class="wrap"><span class="brand">${LOGO_SVG}AI Content Detector</span></div></header>
+<header class="topbar"><div class="wrap"><a class="brand" href="/">${LOGO_SVG}AI Content Detector</a><nav class="nav"><a href="/">Home</a><a href="/about">About</a></nav></div></header>
 <main class="wrap main">
 ${body}
 </main>
@@ -265,7 +287,7 @@ export function renderForm(opts: FormOptions = {}): string {
     "AI Content Detector",
     `<div class="card">
 <h1 class="h">Is this text AI-written?</h1>
-<p class="sub">Paste a public GitHub issue, pull request, or comment URL. We read the text and estimate whether it was written by AI &mdash; and which model most likely wrote it.</p>
+<p class="sub">Paste a public GitHub issue, pull request, or comment URL. We read the text and estimate whether it was written by AI, and which model most likely wrote it.</p>
 ${errorHtml}<form class="probe" method="post" action="/analyze">
   <div class="field">
     <label for="url">Source URL</label>
@@ -274,6 +296,46 @@ ${errorHtml}<form class="probe" method="post" action="/analyze">
 ${passwordHtml}  <button class="btn btn-primary" type="submit">Analyze ${ARROW_SVG}</button>
 </form>
 </div>`,
+  );
+}
+
+export function renderAbout(): string {
+  const critRows = Object.entries(WHICH_AI_CRITERIA)
+    .map(
+      ([label, desc]) =>
+        `<li><code>${escapeHtml(label)}</code><span>${escapeHtml(desc)}</span></li>`,
+    )
+    .join("\n");
+
+  return page(
+    "AI Content Detector: About",
+    `<div class="card">
+<h1 class="h">How this works</h1>
+<p class="prose">Paste the URL of a public GitHub issue, pull request, or comment. The tool reads the text and estimates whether a person or an AI model wrote it, and which model most likely did.</p>
+<ol class="steps">
+  <li>You give it the URL of a public GitHub issue, PR, or comment.</li>
+  <li>The server fetches that text through GitHub's API.</li>
+  <li>It sends the text to Jev, a decision model from TypeSafe, and asks two questions.</li>
+  <li>Jev returns a probability that the text is AI-written, plus a per-model breakdown.</li>
+  <li>The result page shows a verdict of Human, Uncertain, or AI, with the numbers behind it.</li>
+</ol>
+</div>
+<div class="card">
+<h2 class="h2">The prompt</h2>
+<p class="prose">Jev answers both questions in a single call. Quoted text and code blocks are excluded, so a pasted stack trace or someone else's words don't skew the result.</p>
+<p class="about-q">1. Is it AI-written? (score from 0 to 1)</p>
+<pre class="code">${escapeHtml(IS_AI_INSTRUCTIONS)}</pre>
+<p class="about-q">2. Which AI wrote it? (pick one label)</p>
+<pre class="code">${escapeHtml(WHICH_AI_INSTRUCTIONS)}</pre>
+<ul class="crit">
+${critRows}
+</ul>
+</div>
+<div class="card">
+<h2 class="h2">Source</h2>
+<p class="prose">The code is open source. Read it, run it yourself, or open an issue at <a href="${escapeHtml(REPO_URL)}">${escapeHtml(REPO_URL.replace("https://", ""))}</a>.</p>
+</div>
+<div class="actions"><a class="btn" href="/">Analyze a URL</a></div>`,
   );
 }
 
@@ -346,7 +408,7 @@ ${renderProbabilityBars(a.probabilities_json)}
     : "";
 
   return page(
-    "Result — AI Content Detector",
+    "AI Content Detector: Result",
     `<div class="verdict" style="${VERDICT_VARS[verdict]}">
 <h1 class="verdict-h">${VERDICT_HEADLINE[verdict]}</h1>
 <p class="verdict-sub">${VERDICT_SUB[verdict]}</p>

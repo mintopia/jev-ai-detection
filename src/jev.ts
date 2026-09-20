@@ -14,6 +14,22 @@ function isWhichAiLabel(v: unknown): v is WhichAiLabel {
   return typeof v === "string" && (WHICH_AI_LABELS as readonly string[]).includes(v);
 }
 
+export const EXCLUSION_NOTE =
+  "Judge only the author's own prose. Ignore quoted text (lines beginning with \">\") and any fenced or inline code blocks. Quotes and code are often copied from elsewhere and say nothing about who wrote the surrounding message.";
+
+export const IS_AI_INSTRUCTIONS = `Is this text written by an AI? 1 means definitely AI, 0 means definitely human. ${EXCLUSION_NOTE}`;
+
+export const WHICH_AI_INSTRUCTIONS = `Which AI most likely wrote this text? ${EXCLUSION_NOTE}`;
+
+export const WHICH_AI_CRITERIA: Record<WhichAiLabel, string> = {
+  human: "A human wrote this text.",
+  claude: "Anthropic's Claude wrote this text.",
+  gpt: "OpenAI's GPT wrote this text.",
+  gemini: "Google's Gemini wrote this text.",
+  grok: "xAI's Grok wrote this text.",
+  other: "Some other AI wrote this text.",
+};
+
 export function parseDecisionsResponse(data: unknown): JevResult {
   const answers = (data as { answers?: unknown })?.answers as
     | { is_ai?: { noul?: unknown }; which_ai?: { choice?: unknown; probabilities?: unknown } }
@@ -37,19 +53,12 @@ export async function analyzeText(text: string, apiKey: string): Promise<JevResu
     questions: {
       is_ai: {
         type: "noul",
-        instructions: "Is this text written by an AI? 1 means definitely AI, 0 means definitely human.",
+        instructions: IS_AI_INSTRUCTIONS,
       },
       which_ai: {
         type: "choice",
-        instructions: "Which AI most likely wrote this text?",
-        criteria: {
-          human: "A human wrote this text.",
-          claude: "Anthropic's Claude wrote this text.",
-          gpt: "OpenAI's GPT wrote this text.",
-          gemini: "Google's Gemini wrote this text.",
-          grok: "xAI's Grok wrote this text.",
-          other: "Some other AI wrote this text.",
-        },
+        instructions: WHICH_AI_INSTRUCTIONS,
+        criteria: WHICH_AI_CRITERIA,
       },
     },
   };
