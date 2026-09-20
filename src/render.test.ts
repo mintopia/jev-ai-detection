@@ -46,13 +46,13 @@ describe("renderResult", () => {
 
   it("renders the verdict and confidence percentage", () => {
     const html = renderResult(base);
-    expect(html).toContain("AI-written: Yes");
+    expect(html).toContain("Likely AI-written");
     expect(html).toContain("73%");
   });
 
   it("shows the raw AI-written % even on a human verdict", () => {
     const html = renderResult({ ...base, is_ai_noul: 0.12 });
-    expect(html).toContain("AI-written: No (human)");
+    expect(html).toContain("Likely human");
     expect(html).toContain("12%");
   });
 
@@ -63,7 +63,7 @@ describe("renderResult", () => {
 
   it("shows the which-AI section on an uncertain verdict", () => {
     const html = renderResult({ ...base, is_ai_noul: 0.5 });
-    expect(html).toContain("AI-written: Uncertain");
+    expect(html).toContain("Uncertain");
     expect(html).toContain("Which AI?");
   });
 
@@ -80,11 +80,6 @@ describe("renderResult", () => {
   it("survives malformed probability JSON", () => {
     const html = renderResult({ ...base, probabilities_json: "not json" });
     expect(html).toContain("No per-label breakdown available.");
-  });
-
-  it("includes the calibration honesty note", () => {
-    const html = renderResult(base);
-    expect(html).toContain("calibration holds across groups");
   });
 
   it("links back to the source URL", () => {

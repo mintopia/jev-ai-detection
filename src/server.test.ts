@@ -7,7 +7,7 @@ import type { Config } from "./config.js";
 
 function makeConfig(over: Partial<Config> = {}): Config {
   return {
-    openRouterApiKey: "sk-test",
+    typesafeApiKey: "sk-test",
     port: 0,
     githubToken: undefined,
     allowPrivateRepos: false,
@@ -135,7 +135,7 @@ describe("POST /analyze private-repo gating", () => {
         if (u === "https://api.github.com/repos/owner/secret/issues/1") {
           return { ok: true, status: 200, json: async () => ({ body: "hello" }) };
         }
-        if (u === "https://openrouter.ai/api/alpha/decisions") {
+        if (u === "https://api.typesafe.ai/v1/systemone") {
           return {
             ok: true,
             status: 200,
@@ -156,7 +156,7 @@ describe("POST /analyze private-repo gating", () => {
 
     expect(res.status).toBe(302);
     expect(calls).toContain("https://api.github.com/repos/owner/secret/issues/1");
-    expect(calls).toContain("https://openrouter.ai/api/alpha/decisions");
+    expect(calls).toContain("https://api.typesafe.ai/v1/systemone");
   });
 
   it("lets a public repo through the gate", async () => {
@@ -171,7 +171,7 @@ describe("POST /analyze private-repo gating", () => {
         if (u === "https://api.github.com/repos/owner/pub/issues/1") {
           return { ok: true, status: 200, json: async () => ({ body: "hi" }) };
         }
-        if (u === "https://openrouter.ai/api/alpha/decisions") {
+        if (u === "https://api.typesafe.ai/v1/systemone") {
           return {
             ok: true,
             status: 200,
@@ -215,7 +215,7 @@ describe("POST /analyze submit gating", () => {
         if (u === "https://api.github.com/repos/owner/pub/issues/1") {
           return { ok: true, status: 200, json: async () => ({ body: "hi" }) };
         }
-        if (u === "https://openrouter.ai/api/alpha/decisions") {
+        if (u === "https://api.typesafe.ai/v1/systemone") {
           return {
             ok: true,
             status: 200,

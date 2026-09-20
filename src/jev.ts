@@ -1,5 +1,5 @@
-const DECISIONS_URL = "https://openrouter.ai/api/alpha/decisions";
-const MODEL = "typesafe/jev-1.13";
+const DECISIONS_URL = "https://api.typesafe.ai/v1/systemone";
+const MODEL = "jev-latest";
 
 export const WHICH_AI_LABELS = ["human", "claude", "gpt", "gemini", "grok", "other"] as const;
 export type WhichAiLabel = (typeof WHICH_AI_LABELS)[number];

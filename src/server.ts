@@ -63,7 +63,7 @@ export function createApp({ db, config }: AppDeps): express.Express {
       }
 
       const text = await fetchSourceText(source, config.githubToken);
-      const result = await analyzeText(text, config.openRouterApiKey);
+      const result = await analyzeText(text, config.typesafeApiKey);
       const id = insertAnalysis(db, {
         source_url: rawUrl,
         source_type: source.kind,

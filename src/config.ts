@@ -1,5 +1,5 @@
 export interface Config {
-  openRouterApiKey: string;
+  typesafeApiKey: string;
   port: number;
   githubToken?: string;
   allowPrivateRepos: boolean;
@@ -21,9 +21,9 @@ function parseTrustProxy(raw: string | undefined): boolean | number | string {
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv): Config {
-  const openRouterApiKey = env.OPENROUTER_API_KEY;
-  if (!openRouterApiKey) {
-    throw new Error("OPENROUTER_API_KEY is required");
+  const typesafeApiKey = env.TYPESAFE_API_KEY;
+  if (!typesafeApiKey) {
+    throw new Error("TYPESAFE_API_KEY is required");
   }
 
   const port = env.PORT ? Number(env.PORT) : 3000;
@@ -46,7 +46,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
   }
 
   return {
-    openRouterApiKey,
+    typesafeApiKey,
     port,
     githubToken: env.GITHUB_TOKEN,
     allowPrivateRepos,
