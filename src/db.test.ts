@@ -8,6 +8,10 @@ const sample = {
   is_ai_noul: 0.73,
   which_ai: "claude",
   probabilities_json: JSON.stringify({ claude: 0.6, human: 0.1 }),
+  input_tokens: 288,
+  output_tokens: 21,
+  elapsed_ms: 620,
+  cost_usd: 0.0000121,
 };
 
 describe("db", () => {

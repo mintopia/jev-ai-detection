@@ -1,20 +1,27 @@
 import { describe, it, expect } from "vitest";
-import { escapeHtml, renderForm, renderResult } from "./render.js";
+import { escapeHtml, renderForm, renderResult, renderPasswordPrompt } from "./render.js";
 import type { Analysis } from "./db.js";
 
 describe("renderForm", () => {
-  it("omits the password field by default", () => {
+  it("has no password field (auth is handled by the session prompt)", () => {
     expect(renderForm()).not.toContain('name="password"');
-  });
-
-  it("shows a password field when submission requires a password", () => {
-    const html = renderForm({ requirePassword: true });
-    expect(html).toContain('type="password"');
-    expect(html).toContain('name="password"');
   });
 
   it("renders an escaped error message", () => {
     expect(renderForm({ error: "<bad>" })).toContain("&lt;bad&gt;");
+  });
+});
+
+describe("renderPasswordPrompt", () => {
+  it("renders a password field that posts to /login", () => {
+    const html = renderPasswordPrompt();
+    expect(html).toContain('type="password"');
+    expect(html).toContain('name="password"');
+    expect(html).toContain('action="/login"');
+  });
+
+  it("renders an escaped error message", () => {
+    expect(renderPasswordPrompt("<bad>")).toContain("&lt;bad&gt;");
   });
 });
 
@@ -35,6 +42,10 @@ describe("renderResult", () => {
     is_ai_noul: 0.73,
     which_ai: "claude",
     probabilities_json: "{}",
+    input_tokens: 288,
+    output_tokens: 21,
+    elapsed_ms: 620,
+    cost_usd: 0.0000121,
     created_at: "2026-01-01",
   };
 
@@ -56,9 +67,9 @@ describe("renderResult", () => {
     expect(html).toContain("12%");
   });
 
-  it("hides the which-AI section on a human verdict", () => {
+  it("still shows the which-AI breakdown on a human verdict", () => {
     const html = renderResult({ ...base, is_ai_noul: 0.12 });
-    expect(html).not.toContain("Which AI?");
+    expect(html).toContain("Which AI?");
   });
 
   it("shows the which-AI section on an uncertain verdict", () => {

@@ -9,6 +9,10 @@ export interface Analysis {
   is_ai_noul: number;
   which_ai: string;
   probabilities_json: string;
+  input_tokens: number | null;
+  output_tokens: number | null;
+  elapsed_ms: number | null;
+  cost_usd: number | null;
   created_at: string;
 }
 
@@ -26,9 +30,26 @@ export function openDb(path: string): Database.Database {
       is_ai_noul REAL NOT NULL,
       which_ai TEXT NOT NULL,
       probabilities_json TEXT NOT NULL,
+      input_tokens INTEGER,
+      output_tokens INTEGER,
+      elapsed_ms INTEGER,
+      cost_usd REAL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
+
+  const existing = new Set(
+    (db.prepare("PRAGMA table_info(analyses)").all() as { name: string }[]).map((c) => c.name),
+  );
+  for (const [name, type] of [
+    ["input_tokens", "INTEGER"],
+    ["output_tokens", "INTEGER"],
+    ["elapsed_ms", "INTEGER"],
+    ["cost_usd", "REAL"],
+  ] as const) {
+    if (!existing.has(name)) db.exec(`ALTER TABLE analyses ADD COLUMN ${name} ${type}`);
+  }
+
   return db;
 }
 
@@ -36,9 +57,11 @@ export function insertAnalysis(db: Database.Database, row: NewAnalysis): string 
   const id = randomBytes(16).toString("hex");
   db.prepare(
     `INSERT INTO analyses
-       (id, source_url, source_type, analyzed_text, is_ai_noul, which_ai, probabilities_json)
+       (id, source_url, source_type, analyzed_text, is_ai_noul, which_ai, probabilities_json,
+        input_tokens, output_tokens, elapsed_ms, cost_usd)
      VALUES
-       (@id, @source_url, @source_type, @analyzed_text, @is_ai_noul, @which_ai, @probabilities_json)`,
+       (@id, @source_url, @source_type, @analyzed_text, @is_ai_noul, @which_ai, @probabilities_json,
+        @input_tokens, @output_tokens, @elapsed_ms, @cost_usd)`,
   ).run({ id, ...row });
   return id;
 }

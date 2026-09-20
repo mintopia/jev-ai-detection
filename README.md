@@ -2,7 +2,7 @@
 
 A small web app that guesses whether a GitHub issue, pull request, or comment was written by a person or an AI model, and which model most likely wrote it.
 
-Paste a public GitHub URL. The app fetches the text, sends it to Jev (a decision model from TypeSafe), and shows a verdict of Human, Uncertain, or AI, with the per-model breakdown behind it. It excludes quoted text and code blocks from the judgment, so a pasted stack trace or someone else's words don't skew the result.
+Paste a public GitHub URL. The app fetches the text, sends it to Jev (a decision model from TypeSafe), and shows a verdict of Human, Uncertain, or AI, with the per-model breakdown behind it. It excludes quoted text and code blocks from the judgement, so a pasted stack trace or someone else's words don't skew the result.
 
 ## How it works
 

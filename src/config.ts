@@ -7,6 +7,17 @@ export interface Config {
   submitPassword: string;
   anonRatePerMin: number;
   trustProxy: boolean | number | string;
+  jevInputPricePerMTok: number;
+  jevOutputPricePerMTok: number;
+}
+
+function parsePrice(raw: string | undefined, fallback: number): number {
+  if (raw === undefined || raw.trim() === "") return fallback;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || n < 0) {
+    throw new Error(`Price must be a non-negative number, got: ${raw}`);
+  }
+  return n;
 }
 
 // Express "trust proxy" setting: false (direct), a hop count, or a passthrough
@@ -54,5 +65,7 @@ export function loadConfig(env: NodeJS.ProcessEnv): Config {
     submitPassword: env.SUBMIT_PASSWORD ?? "",
     anonRatePerMin,
     trustProxy: parseTrustProxy(env.TRUST_PROXY),
+    jevInputPricePerMTok: parsePrice(env.JEV_INPUT_PRICE_PER_MTOK, 0.042),
+    jevOutputPricePerMTok: parsePrice(env.JEV_OUTPUT_PRICE_PER_MTOK, 0),
   };
 }

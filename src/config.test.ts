@@ -80,4 +80,17 @@ describe("loadConfig", () => {
     expect(loadConfig({ TYPESAFE_API_KEY: "k", TRUST_PROXY: "true" }).trustProxy).toBe(true);
     expect(loadConfig({ TYPESAFE_API_KEY: "k", TRUST_PROXY: "loopback" }).trustProxy).toBe("loopback");
   });
+
+  it("defaults Jev token prices and reads overrides", () => {
+    const def = loadConfig({ TYPESAFE_API_KEY: "k" });
+    expect(def.jevInputPricePerMTok).toBe(0.042);
+    expect(def.jevOutputPricePerMTok).toBe(0);
+    const over = loadConfig({ TYPESAFE_API_KEY: "k", JEV_INPUT_PRICE_PER_MTOK: "0.1", JEV_OUTPUT_PRICE_PER_MTOK: "0.2" });
+    expect(over.jevInputPricePerMTok).toBe(0.1);
+    expect(over.jevOutputPricePerMTok).toBe(0.2);
+  });
+
+  it("rejects a negative price", () => {
+    expect(() => loadConfig({ TYPESAFE_API_KEY: "k", JEV_INPUT_PRICE_PER_MTOK: "-1" })).toThrow(/Price/);
+  });
 });

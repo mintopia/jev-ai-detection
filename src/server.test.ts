@@ -15,6 +15,8 @@ function makeConfig(over: Partial<Config> = {}): Config {
     submitPassword: "",
     anonRatePerMin: 5,
     trustProxy: false,
+    jevInputPricePerMTok: 0.042,
+    jevOutputPricePerMTok: 0,
     ...over,
   };
 }
@@ -26,14 +28,18 @@ async function makeServer(config: Config) {
   await new Promise<void>((resolve) => server.listen(0, resolve));
   const { port } = server.address() as AddressInfo;
 
-  const post = (fields: Record<string, string>, headers: Record<string, string> = {}) =>
-    new Promise<{ status: number; body: string }>((resolve, reject) => {
+  const postTo = (
+    path: string,
+    fields: Record<string, string>,
+    headers: Record<string, string> = {},
+  ) =>
+    new Promise<{ status: number; body: string; headers: http.IncomingHttpHeaders }>((resolve, reject) => {
       const payload = new URLSearchParams(fields).toString();
       const req = http.request(
         {
           host: "127.0.0.1",
           port,
-          path: "/analyze",
+          path,
           method: "POST",
           headers: {
             "Content-Type": "application/x-www-form-urlencoded",
@@ -44,7 +50,7 @@ async function makeServer(config: Config) {
         (r) => {
           let chunks = "";
           r.on("data", (c) => (chunks += c));
-          r.on("end", () => resolve({ status: r.statusCode ?? 0, body: chunks }));
+          r.on("end", () => resolve({ status: r.statusCode ?? 0, body: chunks, headers: r.headers }));
         },
       );
       req.on("error", reject);
@@ -52,12 +58,21 @@ async function makeServer(config: Config) {
       req.end();
     });
 
+  const post = (fields: Record<string, string>, headers: Record<string, string> = {}) =>
+    postTo("/analyze", fields, headers);
+
+  const login = async (password: string): Promise<string> => {
+    const res = await postTo("/login", { password });
+    const setCookie = res.headers["set-cookie"]?.[0] ?? "";
+    return setCookie.split(";")[0] ?? "";
+  };
+
   const close = async () => {
     await new Promise<void>((resolve) => server.close(() => resolve()));
     db.close();
   };
 
-  return { post, close };
+  return { post, postTo, login, close };
 }
 
 async function postAnalyze(config: Config, url: string): Promise<{ status: number; body: string }> {
@@ -193,19 +208,37 @@ describe("POST /analyze private-repo gating", () => {
 });
 
 describe("POST /analyze submit gating", () => {
-  it("rejects submission without the password when SUBMIT_PASSWORD is set", async () => {
+  it("blocks analysis without a session and shows the login prompt when SUBMIT_PASSWORD is set", async () => {
     const { post, close } = await makeServer(makeConfig({ submitPassword: "s3cret" }));
     try {
       const res = await post({ url: "https://github.com/owner/pub/issues/1" });
       expect(res.status).toBe(401);
-      expect(res.body).toContain("password is required");
       expect(res.body).toContain('name="password"');
+      expect(res.body).toContain('action="/login"');
     } finally {
       await close();
     }
   });
 
-  it("lets the correct password bypass the rate limit", async () => {
+  it("sets a session cookie on the correct password and rejects the wrong one", async () => {
+    const { postTo, login, close } = await makeServer(makeConfig({ submitPassword: "s3cret" }));
+    try {
+      const wrong = await postTo("/login", { password: "nope" });
+      expect(wrong.status).toBe(401);
+      expect(wrong.headers["set-cookie"]).toBeUndefined();
+
+      const good = await postTo("/login", { password: "s3cret" });
+      expect(good.status).toBe(302);
+      expect(good.headers.location).toBe("/analyze");
+
+      const cookie = await login("s3cret");
+      expect(cookie).toContain("jev_auth=");
+    } finally {
+      await close();
+    }
+  });
+
+  it("lets a logged-in session bypass the rate limit", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (u: string) => {
@@ -231,15 +264,13 @@ describe("POST /analyze submit gating", () => {
       }),
     );
 
-    const { post, close } = await makeServer(
+    const { post, login, close } = await makeServer(
       makeConfig({ submitPassword: "s3cret", anonRatePerMin: 1 }),
     );
     try {
+      const cookie = await login("s3cret");
       for (let i = 0; i < 3; i++) {
-        const res = await post({
-          url: "https://github.com/owner/pub/issues/1",
-          password: "s3cret",
-        });
+        const res = await post({ url: "https://github.com/owner/pub/issues/1" }, { Cookie: cookie });
         expect(res.status).toBe(302);
       }
     } finally {
