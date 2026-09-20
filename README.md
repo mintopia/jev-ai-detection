@@ -83,6 +83,13 @@ volumes:
   detector-data:
 ```
 
+## AI Disclosure
+
+This project was written using AI assistance:
+
+ - Claude Sonnet 5
+ - Claude Opus 4.8
+
 ## License
 
 MIT License
