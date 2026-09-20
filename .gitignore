@@ -4,3 +4,6 @@ data.sqlite-*
 *.sqlite
 *.sqlite-*
 .env
+.scratch
+.impeccable
+.claude/scheduled_tasks.lock
