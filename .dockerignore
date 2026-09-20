@@ -1,0 +1,12 @@
+node_modules
+npm-debug.log
+.git
+.github
+*.sqlite
+*.sqlite-*
+.env
+.scratch
+.impeccable
+.claude
+docs
+*.md
